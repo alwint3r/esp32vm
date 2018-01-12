@@ -4,9 +4,11 @@ import os
 import urllib2
 import urlparse
 import zipfile
+import tarfile
 
 root_directory = os.path.join(os.environ['HOME'], '.esp32vm')
 esp_idf_baseurl = 'https://github.com/espressif/esp-idf/archive/'
+toolchain_baseurl = 'https://dl.espressif.com/dl/'
 
 def download_file(url, out_file=None):
     """
@@ -108,6 +110,42 @@ def get_toolchain_version(idf_revision):
 
     return (toolchain_version, gcc_version)
 
+def download_xtensa_toolchain(idf_revision, output_dir):
+    xtensa_version, gcc_version = get_toolchain_version(idf_revision)
+    if not xtensa_version or not gcc_version:
+        raise Exception('Failed to get toolchain version of %s' % idf_revision)
+    
+    toolchain_dir = 'xtensa-esp32-elf'
+    output_filename = '%s-linux64-%s-%s.tar.gz' % (toolchain_dir, xtensa_version, gcc_version)
+    output_path = os.path.join(output_dir, output_filename)
+    extracted_dir = os.path.join(output_dir, toolchain_dir)
+
+    if os.path.exists(output_path):
+        if os.path.isdir(extracted_dir):
+            print('xtensa esp32 toolchain is already installed for %s' % idf_revision)
+            os.unlink(output_path)
+            return True
+        else:
+            tar = tarfile.open(output_path, 'r:gz')
+            tar.extractall(output_dir)
+            tar.close()
+            os.unlink(output_path)
+            return True
+    else:
+        if os.path.isdir(extracted_dir):
+            print('xtensa esp32 toolchain is already installed for %s' % idf_revision)
+            return True
+        else:
+            toolchain_dl_url = '%s%s' % (toolchain_baseurl, output_filename)
+            download_file(toolchain_dl_url, output_path)
+            tar = tarfile.open(output_path, 'r:gz')
+            tar.extractall(output_dir)
+            tar.close()
+            os.unlink(output_path)
+            return True
+    return False
+
+
 def get_idf_dir(idf_revision):
     """
     Return path to ESP-IDF of an environment
@@ -130,10 +168,10 @@ def create_env(idf_revision):
 
     if os.path.isdir(fullpath):
         print('Environment %s is already exists' % idf_revision)
-        return True
     else:
         os.mkdir(fullpath)
 
     download_idf(idf_revision, fullpath)
+    download_xtensa_toolchain(idf_revision, fullpath)
 
     return True
