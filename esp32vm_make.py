@@ -39,6 +39,44 @@ def create_root_dir():
 
     return False
 
+def download_idf(idf_revision, output_dir):
+    """
+    Download ESP-IDF with specified revision to a directory
+    """
+
+    download_url = '%s%s.zip' % (esp_idf_baseurl, idf_revision)
+    zip_output_filename = '%s.zip' % idf_revision
+    zip_output_path = os.path.join(output_dir, zip_output_filename)
+
+    extracted_dir = None
+    if idf_revision[0] == 'v':
+        extracted_dir = 'esp-idf-%s' % idf_revision[1:]
+    else:
+        extracted_dir = 'esp-idf-%s' % idf_revision
+
+    extracted_dir = os.path.join(output_dir, extracted_dir)
+
+    if os.path.exists(zip_output_path):
+        if os.path.exists(extracted_dir):
+            print('ESP-IDF revision %s is already installed' %idf_revision)
+            os.unlink(zip_output_path)
+            return True
+        else:
+            zip_file = zipfile.ZipFile(zip_output_path)
+            zip_file.extractall(output_dir)
+            os.unlink(zip_output_path)
+            return True
+    else:
+        if os.path.exists(extracted_dir):
+            print('ESP-IDF revision %s is already installed' %idf_revision)
+            return True
+        else:
+            download_file(download_url, zip_output_path)
+            zip_file = zipfile.ZipFile(zip_output_path)
+            zip_file.extractall(output_dir)
+            os.unlink(zip_output_path)
+            return True
+    return False
 
 def create_env(name, idf_revision):
     """
@@ -49,37 +87,13 @@ def create_env(name, idf_revision):
         create_root_dir()
 
     fullpath = os.path.join(root_directory, name)
-    output_filename = '%s.zip' % idf_revision
-    download_url = '%s%s.zip' % (esp_idf_baseurl, idf_revision)
 
     if os.path.isdir(fullpath):
         print('Environment %s is already exists' % name)
+        return True
     else:
         os.mkdir(fullpath)
-    out_path = os.path.join(fullpath, output_filename)
 
-    if not os.path.exists(out_path):
-        download_file(download_url, out_path)
-
-    if idf_revision[0] == 'v':
-        extracted_dir = 'esp-idf-%s' % idf_revision[1:]
-    else:
-        extracted_dir = 'esp-idf-%s' % idf_revision
-    
-    extracted_dir = os.path.join(fullpath, extracted_dir)
-
-    if (os.path.exists(out_path) and not os.path.isdir(extracted_dir)) or (not os.path.exists(out_path) and not os.path.isdir(extracted_dir)):
-        zip_file = zipfile.ZipFile(out_path)
-        zip_file.extractall(fullpath)
-
-        if not os.path.isdir(extracted_dir):
-            print('Failed to extract ESP-IDF archive')
-            return False
-        else:
-            os.unlink(out_path)
-
-    elif (os.path.exists(out_path) and os.path.isdir(extracted_dir)) or (not os.path.exists(out_path) and os.path.isdir(extracted_dir)):
-        print('ESP-IDF is already installed on %s environment!' % name)
-        return True
+    download_idf(idf_revision, fullpath)
 
     return True
