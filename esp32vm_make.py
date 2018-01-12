@@ -48,13 +48,7 @@ def download_idf(idf_revision, output_dir):
     zip_output_filename = '%s.zip' % idf_revision
     zip_output_path = os.path.join(output_dir, zip_output_filename)
 
-    extracted_dir = None
-    if idf_revision[0] == 'v':
-        extracted_dir = 'esp-idf-%s' % idf_revision[1:]
-    else:
-        extracted_dir = 'esp-idf-%s' % idf_revision
-
-    extracted_dir = os.path.join(output_dir, extracted_dir)
+    extracted_dir = get_idf_dir(idf_revision)
 
     if os.path.exists(zip_output_path):
         if os.path.exists(extracted_dir):
@@ -78,7 +72,53 @@ def download_idf(idf_revision, output_dir):
             return True
     return False
 
-def create_env(name, idf_revision):
+def get_toolchain_version(idf_revision):
+    """
+    Get xtensa esp32 toolchain version from esp-idf
+    """
+
+    idf_dir = get_idf_dir(idf_revision)
+    if not os.path.isdir(idf_dir):
+        raise Exception('ESP-IDF does not exists in %s environment!' % idf_revision)
+
+    project_makefile = os.path.join(idf_dir, 'make/project.mk')
+    if not os.path.exists(project_makefile):
+        raise Exception('ESP-IDF project.mk does not exist in %s environment!' % idf_revision)
+
+    opened_makefile = open(project_makefile, 'r')
+
+    toolchain_version = None
+    gcc_version = None
+
+    for line in opened_makefile.readlines():
+        if line.startswith('SUPPORTED_TOOLCHAIN_COMMIT_DESC'):
+            splitted = line.split(':=')
+            if len(splitted) < 2:
+                pass
+            toolchain_version = splitted[1]
+            toolchain_version = toolchain_version.replace('crosstool-NG', '')
+            toolchain_version = toolchain_version.replace('crosstool-ng-', '')
+            toolchain_version = toolchain_version.strip()
+        if line.startswith('SUPPORTED_TOOLCHAIN_GCC_VERSIONS'):
+            splitted = line.split(':=')
+            if len(splitted) < 2:
+                pass
+            gcc_version = splitted[1]
+            gcc_version = gcc_version.strip()
+
+    return (toolchain_version, gcc_version)
+
+def get_idf_dir(idf_revision):
+    """
+    Return path to ESP-IDF of an environment
+    """
+
+    env_dir = os.path.join(root_directory, idf_revision)
+    ver = idf_revision[1:] if idf_revision[0] == 'v' else idf_revision
+
+    return os.path.join(env_dir, 'esp-idf-%s' % ver)
+
+def create_env(idf_revision):
     """
     Create ESP32 environment on home directory.
     """
@@ -86,10 +126,10 @@ def create_env(name, idf_revision):
     if not os.path.isdir(root_directory):
         create_root_dir()
 
-    fullpath = os.path.join(root_directory, name)
+    fullpath = os.path.join(root_directory, idf_revision)
 
     if os.path.isdir(fullpath):
-        print('Environment %s is already exists' % name)
+        print('Environment %s is already exists' % idf_revision)
         return True
     else:
         os.mkdir(fullpath)
