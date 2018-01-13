@@ -5,6 +5,7 @@ import urllib2
 import urlparse
 import zipfile
 import tarfile
+import sys
 
 root_directory = os.path.join(os.environ['HOME'], '.esp32vm')
 esp_idf_baseurl = 'https://github.com/espressif/esp-idf/archive/'
@@ -111,6 +112,10 @@ def get_toolchain_version(idf_revision):
     return (toolchain_version, gcc_version)
 
 def download_xtensa_toolchain(idf_revision, output_dir):
+    """
+    Download xtensa esp32 toolchain that is used by a specific ESP-IDF version
+    """
+
     xtensa_version, gcc_version = get_toolchain_version(idf_revision)
     if not xtensa_version or not gcc_version:
         raise Exception('Failed to get toolchain version of %s' % idf_revision)
@@ -175,3 +180,18 @@ def create_env(idf_revision):
     download_xtensa_toolchain(idf_revision, fullpath)
 
     return True
+
+def main():
+    """
+    Main function of esp32vm CLI tool
+    """
+
+    if len(sys.argv) < 2:
+        print("Usage: esp32vm.py ESPIDF_VERSION")
+        return sys.exit(-1)
+
+    create_env(sys.argv[1])
+
+
+if __name__ == "__main__":
+    main()
