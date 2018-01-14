@@ -181,17 +181,48 @@ def create_env(idf_revision):
 
     return True
 
+def print_envs(envs):
+    """
+    Print all installed environment to stdout
+    """
+    for env in envs:
+        print(env)
+
+def list_envs():
+    """
+    List all environment installed on current system
+    """
+    envs = os.listdir(root_directory)
+    results = []
+    for env in envs:
+        env_dir = os.path.join(root_directory, env)
+        idf_dir = get_idf_dir(env)
+        toolchain_dir = os.path.join(env_dir, 'xtensa-esp32-elf')
+
+        if os.path.isdir(idf_dir) and os.path.isdir(toolchain_dir):
+            results.append(env)
+
+    return results
+
 def main():
     """
     Main function of esp32vm CLI tool
     """
 
     if len(sys.argv) < 2:
-        print("Usage: esp32vm.py ESPIDF_VERSION")
+        print("Usage: esp32vm.py COMMAND [...ARGS]")
         return sys.exit(-1)
 
-    create_env(sys.argv[1])
+    command = sys.argv[1]
+    arg = None if len(sys.argv) < 3 else sys.argv[2]
 
+    if command == 'create':
+        if arg is None or (isinstance(arg, str) and len(arg) < 1):
+            print("Usage: esp32vm.py create ESP_IDF_VERSION")
+            return sys.exit(-1)
+        return create_env(arg)
+    elif command == 'list':
+        return print_envs(list_envs())
 
 if __name__ == "__main__":
     main()
